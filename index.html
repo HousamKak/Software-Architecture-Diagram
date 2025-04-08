@@ -1,0 +1,2458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>EA Diagram - Enhanced Interactive Version</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    /********************************************************
+     * PAGE & DIAGRAM LAYOUT
+     ********************************************************/
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: #f9fafc;
+      overflow: hidden;
+    }
+
+    /* The main diagram area, leaving space for the 350px sidebar */
+    #diagram {
+      width: calc(100% - 350px);
+      height: 100vh;
+    }
+
+    /* The right-side sidebar for connection / layer details */
+    .connection-details {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 350px;
+      height: 100vh;
+      background-color: white;
+      box-shadow: -3px 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.3s ease;
+    }
+
+    /* When the sidebar is closed, move it to the right */
+    .connection-details.closed {
+      transform: translateX(100%);
+    }
+
+    /* Toggle button placed inside the sidebar */
+    .toggle-sidebar-btn {
+      position: fixed;
+      top: 20px;
+      right: 350px;
+      /* adjust this so that it sits flush next to the sidebar */
+      width: 36px;
+      height: 36px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 1101;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease;
+    }
+
+    .toggle-sidebar-btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #555;
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+
+    .details-header {
+      border-bottom: 1px solid #eaeaea;
+      padding-bottom: 15px;
+      margin-bottom: 15px;
+    }
+
+    .details-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      color: #333;
+      display: flex;
+      align-items: center;
+    }
+
+    .connection-id {
+      margin-right: 12px;
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      border-radius: 50%;
+      color: white;
+    }
+
+    .details-subtitle {
+      font-size: 15px;
+      margin: 15px 0 5px 0;
+      color: #555;
+      font-weight: 600;
+    }
+
+    .details-content {
+      line-height: 1.6;
+      color: #444;
+    }
+
+    .details-tech-stack {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f5f7f9;
+      border-radius: 6px;
+      border-left: 3px solid #ddd;
+    }
+
+    .tech-item {
+      margin-bottom: 5px;
+    }
+
+    /********************************************************
+     * Collapsible sub-form for either connection or layer controls - BEAUTIFIED
+     ********************************************************/
+    .form-collapse-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+      border: 1px solid #c3c8cf;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 12px;
+      margin: 16px 0 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      color: #495057;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-collapse-toggle:hover {
+      background: linear-gradient(to bottom, #e9ecef, #dee2e6);
+      color: #212529;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-collapse-toggle::before {
+      content: '▼';
+      display: inline-block;
+      font-size: 10px;
+      margin-right: 8px;
+      transition: transform 0.2s;
+    }
+
+    .form-collapse-toggle.active::before {
+      transform: rotate(-90deg);
+    }
+
+    .control-form {
+      margin-top: 10px;
+      padding: 16px;
+      background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+      display: none;
+      /* start hidden until toggled open */
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    .control-form.show {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .control-form .form-group {
+      margin-bottom: 16px;
+    }
+
+    .control-form .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .control-form .form-row .form-group {
+      flex: 1;
+      margin-bottom: 10px;
+    }
+
+    .control-form label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: #4a5568;
+      font-weight: 500;
+    }
+
+    .control-form input {
+      width: 100%;
+      font-size: 14px;
+      padding: 8px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      background-color: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .control-form input:focus {
+      border-color: #3182ce;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+      outline: none;
+    }
+
+    .control-form select {
+      width: 100%;
+      font-size: 14px;
+      padding: 8px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      background-color: white;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px top 50%;
+      background-size: 10px auto;
+      padding-right: 30px;
+    }
+
+    .control-form select:focus {
+      border-color: #3182ce;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+      outline: none;
+    }
+
+    .control-form button {
+      background: linear-gradient(to bottom, #4299e1, #3182ce);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .control-form button:hover {
+      background: linear-gradient(to bottom, #3182ce, #2b6cb0);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .control-form button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    /********************************************************
+     * TOP CONTROLS - Simple, reliable animation
+     ********************************************************/
+    .top-controls {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1002;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #dde1e6;
+      border-radius: 8px;
+      padding: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .top-controls .toolbar-row {
+      display: flex;
+      gap: 5px;
+    }
+
+    /* When hidden, just display the toggle button */
+    #top-controls .toolbar-row.hidden {
+      display: none;
+    }
+
+    .top-controls button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #dde1e6;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s ease;
+      color: #454d5d;
+      position: relative;
+    }
+
+    .top-controls button:hover {
+      background: #f5f7fa;
+      border-color: #c8cfd9;
+      color: #2c3039;
+    }
+
+    .top-controls button:hover::after {
+      content: attr(title);
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1005;
+      pointer-events: none;
+    }
+
+    .top-controls button:active {
+      background: #e9edf2;
+      transform: translateY(1px);
+    }
+
+    #toggle-settings {
+      border-left: 1px solid #dde1e6;
+      margin-left: 5px;
+      /* Instead of padding-left: 5px, do uniform padding or a fixed size: */
+      width: 36px;
+      /* match other top controls */
+      height: 36px;
+      /* match other top controls */
+      background: #f8f9fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      /* matches other button hover styles, etc. */
+      border: 1px solid #dde1e6;
+      /* optional: unify border style with other buttons */
+    }
+
+    .top-controls.hidden #toggle-settings {
+      border-left: none;
+      margin-left: 0;
+      padding-left: 0;
+    }
+
+    /* Diagram title is now on the SVG, not in controls */
+    .diagram-title {
+      font-size: 24px;
+      font-weight: 600;
+      fill: #333;
+      text-anchor: middle;
+      dominant-baseline: hanging;
+    }
+
+    /********************************************************
+     * LEGEND (bottom-left)
+     ********************************************************/
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      font-size: 12px;
+      border: 1px solid #eaeaea;
+      max-width: 280px;
+      z-index: 1001;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      border-radius: 3px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /********************************************************
+     * SVG NODES & LINKS
+     ********************************************************/
+    svg {
+      cursor: grab;
+    }
+
+    svg:active {
+      cursor: grabbing;
+    }
+
+    .node rect {
+      stroke-width: 1.2px;
+      rx: 8px;
+      ry: 8px;
+      transition: stroke-width 0.2s ease;
+    }
+
+    .node rect.active-node {
+      stroke-width: 2.5px;
+      stroke: #555;
+    }
+
+    .node .title {
+      font-size: 14px;
+      font-weight: bold;
+      fill: #222;
+    }
+
+    .node text {
+      fill: #333;
+      pointer-events: none;
+      /* so clicks pass through to node rect */
+    }
+
+    .link {
+      fill: none;
+      stroke-width: 1.5px;
+      stroke-dasharray: 5, 3;
+      transition: stroke-width 0.2s ease;
+      cursor: pointer;
+      /* so entire stroke is clickable, not just label */
+      pointer-events: stroke;
+    }
+
+    /* Link hit area class */
+    .link-hit-area {
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+
+    .keyboard-shortcuts {
+      margin-top: 20px;
+      padding: 10px 15px;
+      background: #f2f7ff;
+      border-left: 3px solid #4299e1;
+      border-radius: 6px;
+    }
+
+    .keyboard-shortcuts p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+
+    .link:hover,
+    .link.active {
+      stroke-width: 2.5px;
+    }
+
+    /* No default fill for arrows - they'll inherit their connection colors */
+    .link-arrow {
+      /* fill set dynamically by type */
+    }
+
+    .data-arrow {
+      /* fill set dynamically by type */
+      opacity: 0.9;
+    }
+
+    filter#drop-shadow feGaussianBlur {
+      stdDeviation: 3;
+    }
+
+    .link-label {
+      cursor: pointer;
+      pointer-events: bounding-box;
+      /* so label rect is clickable */
+    }
+
+    /********************************************************
+     * Keyboard shortcuts panel - fixed positioning
+     ********************************************************/
+    .keyboard-shortcuts-panel {
+      position: fixed;
+      /* Changed from absolute to fixed */
+      left: 20px;
+      bottom: 300px;
+      /* Positioned higher to avoid legend overlap */
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      font-size: 12px;
+      border: 1px solid #eaeaea;
+      max-width: 280px;
+      z-index: 1002;
+      /* Increased z-index to ensure visibility */
+      transition: opacity 0.3s ease;
+    }
+
+    .keyboard-shortcuts-panel.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .keyboard-shortcuts-panel h3 {
+      font-size: 14px;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #333;
+      border-bottom: 1px solid #eaeaea;
+      padding-bottom: 6px;
+    }
+
+    .keyboard-shortcuts-panel p {
+      margin: 4px 0;
+      line-height: 1.4;
+    }
+
+    .keyboard-shortcuts-panel strong {
+      display: inline-block;
+      background: #f5f7fa;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #dde1e6;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    /* Lock/unlock button styles */
+    #toggle-lock {
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+
+    #toggle-lock.locked {
+      background-color: #ffe9e9;
+      color: #d63031;
+    }
+
+    #toggle-lock.unlocked {
+      background-color: #e5f9e0;
+      color: #27ae60;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+
+  <!-- D3 library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+</head>
+
+<body>
+
+  <!-- TOP CONTROLS with simpler structure -->
+  <div id="top-controls" class="top-controls">
+    <div class="toolbar-row">
+      <button id="zoom-in" title="Zoom In">🔍+</button>
+      <button id="zoom-out" title="Zoom Out">🔍−</button>
+      <button id="zoom-reset" title="Reset Zoom">⟲</button>
+      <button id="reset-diagram" title="Reset Layout">⌘</button>
+      <button id="save-config" title="Save Config">💾</button>
+      <button id="toggle-lock" title="Lock/Unlock Editing" class="unlocked">🔓</button>
+    </div>
+    <button id="toggle-settings" title="Toggle Controls">⚙</button>
+  </div>
+
+  <!-- Keyboard shortcuts panel -->
+  <div id="keyboard-shortcuts-panel" class="keyboard-shortcuts-panel">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="shortcut-section">
+      <p>Use arrow keys to adjust connection points:</p>
+      <p><strong>←/→</strong>: Adjust Source X offset</p>
+      <p><strong>↑/↓</strong>: Adjust Source Y offset</p>
+      <p><strong>Shift + ←/→</strong>: Adjust Target X offset</p>
+      <p><strong>Shift + ↑/↓</strong>: Adjust Target Y offset</p>
+      <p><strong>Space</strong>: Toggle between straight/orthogonal path</p>
+    </div>
+  </div>
+
+  <!-- Main diagram container -->
+  <div id="diagram"></div>
+
+  <!-- Legend in bottom-left -->
+  <div id="legend" class="legend"></div>
+
+  <button id="toggle-sidebar-btn" aria-label="Toggle sidebar" class="toggle-sidebar-btn">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+      class="icon-xl-heavy">
+      <path fill-rule="evenodd" clip-rule="evenodd"
+        d="M8.85719 3L13.5 3C14.0523 3 14.5 3.44772 14.5 4C14.5 4.55229 14.0523 5 13.5 5H11.5V19H15.1C16.2366 19 17.0289 18.9992 17.6458 18.9488C18.2509 18.8994 18.5986 18.8072 18.862 18.673C19.4265 18.3854 19.8854 17.9265 20.173 17.362C20.3072 17.0986 20.3994 16.7509 20.4488 16.1458C20.4992 15.5289 20.5 14.7366 20.5 13.6V11.5C20.5 10.9477 20.9477 10.5 21.5 10.5C22.0523 10.5 22.5 10.9477 22.5 11.5V13.6428C22.5 14.7266 22.5 15.6008 22.4422 16.3086C22.3826 17.0375 22.2568 17.6777 21.955 18.27C21.4757 19.2108 20.7108 19.9757 19.77 20.455C19.1777 20.7568 18.5375 20.8826 17.8086 20.9422C17.1008 21 16.2266 21 15.1428 21H8.85717C7.77339 21 6.89925 21 6.19138 20.9422C5.46253 20.8826 4.82234 20.7568 4.23005 20.455C3.28924 19.9757 2.52433 19.2108 2.04497 18.27C1.74318 17.6777 1.61737 17.0375 1.55782 16.3086C1.49998 15.6007 1.49999 14.7266 1.5 13.6428V10.3572C1.5 9.27341 1.5 8.39926 1.55782 7.69138C1.61737 6.96253 1.74318 6.32234 2.04497 5.73005C2.52433 4.78924 3.28924 4.02433 4.23005 3.54497C4.82234 3.24318 5.46253 3.11737 6.19138 3.05782C6.89926 2.99998 7.77341 2.99999 8.85719 3ZM9.5 19V5H8.9C7.76339 5 6.97108 5.00078 6.35424 5.05118C5.74907 5.10062 5.40138 5.19279 5.13803 5.32698C4.57354 5.6146 4.1146 6.07354 3.82698 6.63803C3.69279 6.90138 3.60062 7.24907 3.55118 7.85424C3.50078 8.47108 3.5 9.26339 3.5 10.4V13.6C3.5 14.7366 3.50078 15.5289 3.55118 16.1458C3.60062 16.7509 3.69279 17.0986 3.82698 17.362C4.1146 17.9265 4.57354 18.3854 5.13803 18.673C5.40138 18.8072 5.74907 18.8994 6.35424 18.9488C6.97108 18.9992 7.76339 19 8.9 19H9.5ZM5 8.5C5 7.94772 5.44772 7.5 6 7.5H7C7.55229 7.5 8 7.94772 8 8.5C8 9.05229 7.55229 9.5 7 9.5H6C5.44772 9.5 5 9.05229 5 8.5ZM5 12C5 11.4477 5.44772 11 6 11H7C7.55229 11 8 11.4477 8 12C8 12.5523 7.55229 13 7 13H6C5.44772 13 5 12.5523 5 12Z"
+        fill="currentColor"></path>
+      <circle cx="20" cy="5" r="4" fill="#0285FF"></circle>
+    </svg>
+  </button>
+
+  <!-- Right-side sidebar for connection / layer details -->
+  <div class="connection-details" id="connection-details">
+    <div class="empty-state">
+      <div class="empty-state-icon">ⓘ</div>
+      <p>Click on any connection (C1-C14) to view/edit offsets &amp; path mode.</p>
+      <p>Or click on a layer to view details about that layer.</p>
+    </div>
+  </div>
+
+  <script>
+    /***************************************************************
+     * 1) Colors & Gradients
+     ***************************************************************/
+    const colorMap = {
+      client: "#6BA8E3",
+      frontend: "#52B0CF",
+      app: "#70B883",
+      backend: "#9FB76E",
+      auth: "#E6CA61",
+      storage: "#E39479",
+      database: "#AC74B7",
+      cicd: "#6F7EB4",
+      cloud: "#9EABAD"
+    };
+
+    const gradientDefinitions = [
+      { id: "grad-client", start: "#AECBFA", end: colorMap.client },
+      { id: "grad-frontend", start: "#B3DCE6", end: colorMap.frontend },
+      { id: "grad-app", start: "#A8D8B2", end: colorMap.app },
+      { id: "grad-backend", start: "#C2D0A6", end: colorMap.backend },
+      { id: "grad-auth", start: "#F4DE90", end: colorMap.auth },
+      { id: "grad-storage", start: "#FABDA6", end: colorMap.storage },
+      { id: "grad-database", start: "#D3ACDD", end: colorMap.database },
+      { id: "grad-cloud", start: "#C0CACC", end: colorMap.cloud },
+      { id: "grad-cicd", start: "#BEC5DF", end: colorMap.cicd }
+    ];
+
+    /***************************************************************
+     * 2) Layer & Connection Details
+     ***************************************************************/
+    const layerDetails = {
+      client: {
+        title: "Client Layer",
+        description: "All end-user interfaces (web, mobile, desktop).",
+        responsibilities: [
+          "UI rendering",
+          "Local state mgmt",
+          "User input handling",
+          "Initial form validation"
+        ],
+        technologies: [
+          "Web (HTML/CSS/JS)",
+          "Mobile (Swift, Kotlin)",
+          "Desktop (Electron, .NET)"
+        ],
+        challenges: "Must handle various device/screen constraints, plus offline or slow networks."
+      },
+      frontend: {
+        title: "Frontend Layer",
+        description: "Presentation logic, state management, and API client services.",
+        responsibilities: [
+          "UI component architecture",
+          "State mgmt",
+          "API data fetching",
+          "Asset optimization & delivery"
+        ],
+        technologies: [
+          "React/Angular/Vue",
+          "Redux / MobX",
+          "CDN configs",
+          "JS bundlers"
+        ],
+        challenges: "Balance performance & features, possibly handle offline mode."
+      },
+      app: {
+        title: "App Layer",
+        description: "API gateway, load balancing, request routing, caching, rate limiting.",
+        responsibilities: [
+          "Routing to microservices",
+          "API composition",
+          "Throttling & rate limiting",
+          "Response caching"
+        ],
+        technologies: [
+          "Kong / AWS API Gateway",
+          "NGINX / HAProxy",
+          "Redis caching",
+          "Service mesh"
+        ],
+        challenges: "Handle high volume while maintaining low latency & failover."
+      },
+      auth: {
+        title: "Authentication Layer",
+        description: "User auth, SSO, token issuance, access policies.",
+        responsibilities: [
+          "User auth",
+          "Token validation",
+          "Access control enforcement",
+          "SSO integration"
+        ],
+        technologies: [
+          "OAuth2 / OIDC",
+          "JWT tokens",
+          "RBAC/ABAC",
+          "IdP federation"
+        ],
+        challenges: "Strict security with multiple auth methods, SSO, user convenience."
+      },
+      backend: {
+        title: "Backend Layer",
+        description: "Core business logic, domain operations, microservices, worker processes.",
+        responsibilities: [
+          "Business rules",
+          "Domain modeling",
+          "Integration with external services",
+          "Long-running tasks"
+        ],
+        technologies: [
+          "Microservice frameworks",
+          "Event-driven architecture",
+          "DDD patterns",
+          "Async queueing"
+        ],
+        challenges: "Data consistency, scaling, independent deployability of microservices."
+      },
+      storage: {
+        title: "Storage Layer",
+        description: "Unstructured data storage, file mgmt, content delivery, backups.",
+        responsibilities: [
+          "File uploads/downloads",
+          "Content organization",
+          "Media transformations",
+          "Backup & retention"
+        ],
+        technologies: [
+          "S3 / Blob storage",
+          "CDN integration",
+          "Multipart uploads",
+          "Lifecycle policies"
+        ],
+        challenges: "Large file transfers, cost efficiency, durability, cross-region replication."
+      },
+      database: {
+        title: "Database Layer",
+        description: "Data persistence, queries, read replicas, data warehousing.",
+        responsibilities: [
+          "Transactional storage",
+          "Complex queries",
+          "Replication & sharding",
+          "Analytics & reporting"
+        ],
+        technologies: [
+          "PostgreSQL / MySQL",
+          "NoSQL (Mongo/Cassandra)",
+          "Data warehouses",
+          "DB caching & indexing"
+        ],
+        challenges: "Balance performance, consistency, availability. Scale with data growth."
+      },
+      cloud: {
+        title: "Cloud Infrastructure",
+        description: "Compute, networking, & platform services for the entire system.",
+        responsibilities: [
+          "Compute provisioning",
+          "Network security",
+          "HA config",
+          "Autoscaling"
+        ],
+        technologies: [
+          "AWS / Azure / GCP",
+          "Infra as Code",
+          "VPC & security groups",
+          "Availability zones"
+        ],
+        challenges: "Reliable infra with robust security controls & cost mgmt."
+      },
+      cicd: {
+        title: "CI/CD & Source Control",
+        description: "Automated builds, testing, deployments, and version control.",
+        responsibilities: [
+          "Source mgmt",
+          "Automated testing",
+          "Build processes",
+          "Deployment pipelines"
+        ],
+        technologies: [
+          "Git / GitHub / GitLab",
+          "Jenkins / GH Actions",
+          "Artifact repositories",
+          "Test frameworks"
+        ],
+        challenges: "Consistent releases, fast iteration cycles, dev productivity, rollback safety."
+      }
+    };
+
+    const connectionDetails = {
+      "C1": {
+        title: "Client to Frontend",
+        description: "User devices interacting with the frontend layer (web, mobile, etc.).",
+        protocol: "HTTPS/WSS",
+        dataFlow: "Bidirectional",
+        technicalStack: ["TLS 1.3", "HTTP/2", "CDN caching", "WebSockets"],
+        businessImpact: "Critical - direct user experience."
+      },
+      "C2": {
+        title: "Frontend to App",
+        description: "Frontend calls the App layer (API gateway/load balancer).",
+        protocol: "REST/GraphQL",
+        dataFlow: "Bidirectional",
+        technicalStack: ["REST endpoints", "GraphQL queries", "JWT auth", "JSON data"],
+        businessImpact: "High - user workflows."
+      },
+      "C3": {
+        title: "App to Backend",
+        description: "API gateway routes requests to microservices in the backend layer.",
+        protocol: "HTTP/gRPC",
+        dataFlow: "Bidirectional",
+        technicalStack: ["gRPC", "Protobuf", "Service discovery", "Circuit breakers"],
+        businessImpact: "High - system coherence."
+      },
+      "C4": {
+        title: "Backend to Database",
+        description: "Core microservices connect to the DB for reads/writes.",
+        protocol: "SQL/NoSQL",
+        dataFlow: "Read/Write",
+        technicalStack: ["Conn pooling", "ORM frameworks", "Prepared statements", "Read replicas"],
+        businessImpact: "Critical - persistent data."
+      },
+      "C5": {
+        title: "Database to Cloud Infra",
+        description: "DB instances run on or interact with the cloud environment.",
+        protocol: "Cloud Provider APIs",
+        dataFlow: "Mgmt/Control",
+        technicalStack: ["RDS / Cloud SQL", "Auto-scaling", "Automated backups", "Encryption"],
+        businessImpact: "Medium - DB reliability ops."
+      },
+      "C6": {
+        title: "Backend to Cloud Infra",
+        description: "Backend microservices are deployed & managed on the cloud.",
+        protocol: "Cloud Provider APIs",
+        dataFlow: "Mgmt/Control",
+        technicalStack: ["Kubernetes/ECS", "Scaling groups", "VPC networking", "Serverless"],
+        businessImpact: "Medium - scaling & availability."
+      },
+      "C7": {
+        title: "Auth to App",
+        description: "Auth layer validates requests at the gateway for policy enforcement.",
+        protocol: "Internal API",
+        dataFlow: "Validation",
+        technicalStack: ["OAuth2 flows", "JWT validation", "OIDC integration", "Access policies"],
+        businessImpact: "Critical - security gate."
+      },
+      "C8": {
+        title: "Auth to Backend",
+        description: "Auth does fine-grained authorization for microservices.",
+        protocol: "Internal API",
+        dataFlow: "Validation/Context",
+        technicalStack: ["RBAC/ABAC", "Token introspect", "Permissions", "User context mgmt"],
+        businessImpact: "High - data access security."
+      },
+      "C9": {
+        title: "Storage to Backend",
+        description: "Object storage for file mgmt, content delivery from backend services.",
+        protocol: "S3 / Object API",
+        dataFlow: "Bidirectional",
+        technicalStack: ["Signed URLs", "Tiered storage", "Metadata", "Multipart uploads"],
+        businessImpact: "Medium - large binary data."
+      },
+      "C10": {
+        title: "Storage to Cloud Infra",
+        description: "Object storage provisioned & managed via cloud infra.",
+        protocol: "Cloud Provider APIs",
+        dataFlow: "Management",
+        technicalStack: ["S3 / Blob services", "Lifecycle policies", "Bucket replication", "Encryption"],
+        businessImpact: "Low - operational overhead."
+      },
+      "C11": {
+        title: "CI/CD to Frontend",
+        description: "Pipelines build/test/deploy the frontend assets.",
+        protocol: "Deployment Pipeline",
+        dataFlow: "Build/Deploy",
+        technicalStack: ["Repo triggers", "Jest/Cypress", "Bundling", "CDN invalidation"],
+        businessImpact: "Medium - UI release velocity."
+      },
+      "C12": {
+        title: "CI/CD to App",
+        description: "CI/CD for the App layer, e.g. updating gateway configs, versions.",
+        protocol: "Deployment Pipeline",
+        dataFlow: "Build/Deploy",
+        technicalStack: ["API config mgmt", "Canary deploys", "Feature flags", "API versioning"],
+        businessImpact: "Medium - evolving APIs smoothly."
+      },
+      "C13": {
+        title: "CI/CD to Backend",
+        description: "Automated pipeline for backend microservices builds/deploys.",
+        protocol: "Deployment Pipeline",
+        dataFlow: "Build/Deploy",
+        technicalStack: ["Docker builds", "Integration tests", "Config mgmt", "Secret rotation"],
+        businessImpact: "High - reliability & consistency."
+      },
+      "C14": {
+        title: "CI/CD to Database",
+        description: "Automated DB migrations, schema changes via pipelines.",
+        protocol: "Migration Scripts",
+        dataFlow: "Schema Changes",
+        technicalStack: ["Flyway/Liquibase", "Rollback support", "DB version control", "Test data mgmt"],
+        businessImpact: "Critical - data structure evolution."
+      }
+    };
+
+    /***************************************************************
+     * 3) Node & Link Definitions
+     ***************************************************************/
+    // Updated Node Data with Rounded Values
+    let nodeData = [
+      {
+        id: "client",
+        title: "CLIENT LAYER",
+        x: 401.7,
+        y: -232.8,
+        width: 320,
+        height: 125.4,
+        gradientId: "grad-client",
+        items: ["Web", "Mobile", "Desktop"]
+      },
+      {
+        id: "frontend",
+        title: "FRONTEND LAYER",
+        x: 402.3,
+        y: -12.0,
+        width: 320,
+        height: 146.2,
+        gradientId: "grad-frontend",
+        items: ["React/Angular/Vue", "State Mgmt", "API Client", "Asset Delivery"]
+      },
+      {
+        id: "app",
+        title: "APP LAYER",
+        x: 402,
+        y: 233.5,
+        width: 320,
+        height: 125,
+        gradientId: "grad-app",
+        items: ["API Gateway", "Load Balancers", "Caching/Redis"]
+      },
+      {
+        id: "auth",
+        title: "AUTH LAYER",
+        x: 847.5,
+        y: 329.0,
+        width: 260,
+        height: 125.4,
+        gradientId: "grad-auth",
+        items: ["OAuth2 / JWT", "User Mgmt", "SSO Integration"]
+      },
+      {
+        id: "backend",
+        title: "BACKEND LAYER",
+        x: 402,
+        y: 437.5,
+        width: 320,
+        height: 125,
+        gradientId: "grad-backend",
+        items: ["Microservices", "Business Logic", "Worker Processes"]
+      },
+      {
+        id: "storage",
+        title: "STORAGE LAYER",
+        x: -68.9,
+        y: 646.5,
+        width: 260,
+        height: 125.4,
+        gradientId: "grad-storage",
+        items: ["S3 Buckets", "Content Delivery", "File Mgmt"]
+      },
+      {
+        id: "database",
+        title: "DATABASE LAYER",
+        x: 402,
+        y: 663.5,
+        width: 320,
+        height: 125,
+        gradientId: "grad-database",
+        items: ["Primary DB", "Read Replicas", "Warehousing"]
+      },
+      {
+        id: "cloud",
+        title: "CLOUD INFRASTRUCTURE",
+        x: 322,
+        y: 936.5,
+        width: 480,
+        height: 125,
+        gradientId: "grad-cloud",
+        items: ["AWS / Azure", "VPC / Security", "Availability Zones"]
+      },
+      {
+        id: "cicd",
+        title: "CI/CD & SOURCE CONTROL",
+        x: 14.0,
+        y: 289.6,
+        width: 260,
+        height: 146.2,
+        gradientId: "grad-cicd",
+        items: ["Git Repos", "CI/CD Pipelines", "Automation", "Testing"]
+      }
+    ];
+
+    let linkData = [
+      {
+        id: "C1",
+        source: "client",
+        target: "frontend",
+        type: "client",
+        sourceOffsetX: 0.5,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.5,
+        targetOffsetY: 0.0,
+        pathMode: "straight"
+      },
+      {
+        id: "C2",
+        source: "frontend",
+        target: "app",
+        type: "frontend",
+        sourceOffsetX: 0.5,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.5,
+        targetOffsetY: 0.0,
+        pathMode: "straight"
+      },
+      {
+        id: "C3",
+        source: "app",
+        target: "backend",
+        type: "app",
+        sourceOffsetX: 0.5,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.5,
+        targetOffsetY: 0.0,
+        pathMode: "straight"
+      },
+      {
+        id: "C4",
+        source: "backend",
+        target: "database",
+        type: "backend",
+        sourceOffsetX: 0.5,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.5,
+        targetOffsetY: 0.0,
+        pathMode: "straight"
+      },
+      {
+        id: "C5",
+        source: "database",
+        target: "cloud",
+        type: "database",
+        sourceOffsetX: 0.5,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.5,
+        targetOffsetY: 0.0,
+        pathMode: "straight"
+      },
+      {
+        id: "C6",
+        source: "backend",
+        target: "cloud",
+        type: "backend",
+        sourceOffsetX: 1.0,
+        sourceOffsetY: 0.85,
+        targetOffsetX: 0.9,
+        targetOffsetY: 0.0,
+        pathMode: "orth"
+      },
+      {
+        id: "C7",
+        source: "auth",
+        target: "app",
+        type: "auth",
+        sourceOffsetX: 0.0,
+        sourceOffsetY: 0.25,
+        targetOffsetX: 1.0,
+        targetOffsetY: 0.6,
+        pathMode: "straight"
+      },
+      {
+        id: "C8",
+        source: "auth",
+        target: "backend",
+        type: "auth",
+        sourceOffsetX: 0.0,
+        sourceOffsetY: 0.6,
+        targetOffsetX: 1.0,
+        targetOffsetY: 0.3,
+        pathMode: "straight"
+      },
+      {
+        id: "C9",
+        source: "storage",
+        target: "backend",
+        type: "storage",
+        sourceOffsetX: 1.0,
+        sourceOffsetY: 0.4,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.4,
+        pathMode: "straight"
+      },
+      {
+        id: "C10",
+        source: "storage",
+        target: "cloud",
+        type: "storage",
+        sourceOffsetX: 0.8,
+        sourceOffsetY: 0.85,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.4,
+        pathMode: "straight"
+      },
+      {
+        id: "C11",
+        source: "cicd",
+        target: "frontend",
+        type: "cicd",
+        sourceOffsetX: 0.7,
+        sourceOffsetY: 0.0,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.65,
+        pathMode: "straight"
+      },
+      {
+        id: "C12",
+        source: "cicd",
+        target: "app",
+        type: "cicd",
+        sourceOffsetX: 1.0,
+        sourceOffsetY: 0.4,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.4,
+        pathMode: "straight"
+      },
+      {
+        id: "C13",
+        source: "cicd",
+        target: "backend",
+        type: "cicd",
+        sourceOffsetX: 0.9,
+        sourceOffsetY: 1.0,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.15,
+        pathMode: "straight"
+      },
+      {
+        id: "C14",
+        source: "cicd",
+        target: "database",
+        type: "cicd",
+        sourceOffsetX: 0.15,
+        sourceOffsetY: 0.9,
+        targetOffsetX: 0.0,
+        targetOffsetY: 0.75,
+        pathMode: "straight"
+      }
+    ];
+
+    /***************************************************************
+     * 4) Node & Link Classes
+     ***************************************************************/
+    class Node {
+      constructor(d) {
+        this.id = d.id;
+        this.title = d.title;
+        this.x = d.x;
+        this.y = d.y;
+        this.initialX = d.x;
+        this.initialY = d.y;
+        this.width = d.width;
+        this.height = d.height;
+        this.gradientId = d.gradientId;
+        this.items = d.items || [];
+        this.links = [];
+        this.group = null;
+        // We'll store drag offsets to keep node pinned at center
+        this._dragOffsetX = 0;
+        this._dragOffsetY = 0;
+      }
+
+      addLink(link) {
+        this.links.push(link);
+      }
+
+      createGroup(container) {
+        this.group = container.append("g")
+          .attr("class", "node")
+          .attr("id", "node-" + this.id)
+          .attr("transform", `translate(${this.x},${this.y})`)
+          // handle drag with custom offset so pointer is at center
+          .call(
+            d3.drag()
+              .on("start", (event) => this.dragStart(event))
+              .on("drag", (event) => this.dragged(event))
+          )
+          .on("click", (event) => {
+            event.stopPropagation();
+            // Only allow selection if not locked
+            if (!window.diagramInstance?.locked) {
+              Diagram.showNodeDetails(this);
+            }
+          });
+
+        // Main rectangle
+        let rectEl = this.group.append("rect")
+          .attr("width", this.width)
+          .attr("height", this.height)
+          .attr("fill", `url(#${this.gradientId})`)
+          .attr("stroke", "#999")
+          .style("filter", "url(#drop-shadow)");
+
+        // Title
+        this.group.append("text")
+          .attr("class", "title")
+          .attr("x", this.width / 2)
+          .attr("y", 24)
+          .attr("text-anchor", "middle")
+          .text(this.title);
+
+        // Divider
+        this.group.append("line")
+          .attr("x1", 12)
+          .attr("y1", 38)
+          .attr("x2", this.width - 12)
+          .attr("y2", 38)
+          .attr("stroke", "rgba(0,0,0,0.15)")
+          .attr("stroke-width", 1);
+
+        // Place bullet items
+        let bulletY = 58;
+        const maxBulletWidth = this.width - 24;
+        this.items.forEach((item) => {
+          let textEl = this.group.append("text")
+            .attr("font-size", 12)
+            .attr("x", 18)
+            .attr("y", bulletY)
+            .text("• " + item);
+
+          Diagram.wrapText(textEl, maxBulletWidth);
+          let box = textEl.node().getBBox();
+          bulletY += (box.height + 5);
+        });
+
+        // If bullets exceed default box height, expand
+        if (bulletY > this.height - 5) {
+          this.height = bulletY + 5;
+          rectEl.attr("height", this.height);
+        }
+      }
+
+      dragStart(event) {
+        // Don't allow dragging if diagram is locked
+        if (window.diagramInstance?.locked) {
+          return;
+        }
+
+        // On drag start, compute how far the pointer is from the node center
+        const nodeCenterX = this.x + this.width / 2;
+        const nodeCenterY = this.y + this.height / 2;
+        // event.x, event.y is the pointer in the same coordinate system
+        // Store the offset so that node center remains pinned to pointer
+        this._dragOffsetX = nodeCenterX - event.x;
+        this._dragOffsetY = nodeCenterY - event.y;
+      }
+
+      dragged(event) {
+        // Don't allow dragging if diagram is locked
+        if (window.diagramInstance?.locked) {
+          return;
+        }
+
+        // Keep node center pinned to pointer
+        const nodeCenterX = event.x + this._dragOffsetX;
+        const nodeCenterY = event.y + this._dragOffsetY;
+        // Then top-left is nodeCenter - half width/height
+        this.x = nodeCenterX - this.width / 2;
+        this.y = nodeCenterY - this.height / 2;
+
+        this.group.attr("transform", `translate(${this.x},${this.y})`);
+        // Update connected links
+        this.links.forEach(link => link.updatePath());
+      }
+
+      resetPosition() {
+        this.x = this.initialX;
+        this.y = this.initialY;
+        if (this.group) {
+          this.group.attr("transform", `translate(${this.x},${this.y})`);
+        }
+      }
+    }
+
+    class Link {
+      constructor(d, sourceNode, targetNode) {
+        this.id = d.id;
+        this.type = d.type;
+        this.source = sourceNode;
+        this.target = targetNode;
+        this.pathEl = null;
+        this.labelGroup = null;
+
+        this.sourceOffsetX = (typeof d.sourceOffsetX === "number") ? d.sourceOffsetX : 0.5;
+        this.sourceOffsetY = (typeof d.sourceOffsetY === "number") ? d.sourceOffsetY : 0.5;
+        this.targetOffsetX = (typeof d.targetOffsetX === "number") ? d.targetOffsetX : 0.5;
+        this.targetOffsetY = (typeof d.targetOffsetY === "number") ? d.targetOffsetY : 0.5;
+        this.pathMode = d.pathMode || "orth";
+      }
+
+      createPath(container) {
+        // First add a wider invisible stroke path for easier clicking
+        this.hitArea = container.append("path")
+          .attr("class", "link-hit-area")
+          .attr("id", "hit-" + this.id)
+          .attr("stroke", "transparent")
+          .attr("stroke-width", 15) // Much wider for easier clicking
+          .attr("fill", "none")
+          .style("pointer-events", "stroke")
+          .on("click", (event) => {
+            event.stopPropagation();
+            // Only allow selection if not locked
+            if (!window.diagramInstance?.locked) {
+              Diagram.showConnectionDetails(this);
+            }
+          });
+
+        // Then add the visible path
+        this.pathEl = container.append("path")
+          .attr("class", "link")
+          .attr("id", "link-" + this.id)
+          .attr("stroke", colorMap[this.type])
+          .attr("marker-end", `url(#arrow-${this.type})`) // Use type-specific colored arrow
+          .on("click", (event) => {
+            event.stopPropagation();
+            // Only allow selection if not locked
+            if (!window.diagramInstance?.locked) {
+              Diagram.showConnectionDetails(this);
+            }
+          });
+
+        // Label
+        this.labelGroup = container.append("g")
+          .attr("class", "link-label")
+          .attr("id", "label-" + this.id)
+          .on("click", (event) => {
+            event.stopPropagation();
+            Diagram.showConnectionDetails(this);
+          });
+
+        this.labelGroup.append("rect")
+          .attr("width", 28)
+          .attr("height", 16)
+          .attr("rx", 4)
+          .attr("ry", 4)
+          .attr("fill", "white")
+          .attr("fill-opacity", 0.85)
+          .attr("stroke", colorMap[this.type])
+          .attr("stroke-width", 1.2)
+          .attr("x", -14)
+          .attr("y", -10);
+
+        this.labelGroup.append("text")
+          .text(this.id)
+          .attr("font-size", "10px")
+          .attr("font-weight", "600")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "middle")
+          .attr("fill", colorMap[this.type])
+          .attr("y", -2);
+
+        this.updatePath();
+      }
+
+      updatePath() {
+        if (!this.pathEl) return;
+        const pathD = Link.calculatePath(this);
+        this.pathEl.attr("d", pathD);
+
+        // Update the hit area too
+        if (this.hitArea) {
+          this.hitArea.attr("d", pathD);
+        }
+
+        // Position label ~35% along the path
+        const pathLen = this.pathEl.node().getTotalLength();
+        const point = this.pathEl.node().getPointAtLength(pathLen * 0.35);
+        this.labelGroup.attr("transform", `translate(${point.x},${point.y})`);
+      }
+
+      static calculatePath(link) {
+        const s = link.source;
+        const t = link.target;
+
+        // Compute anchor points using offsets
+        const sAnchorX = s.x + link.sourceOffsetX * s.width;
+        const sAnchorY = s.y + link.sourceOffsetY * s.height;
+        const tAnchorX = t.x + link.targetOffsetX * t.width;
+        const tAnchorY = t.y + link.targetOffsetY * t.height;
+
+        // If the user has selected "straight" mode, return a simple straight path.
+        if (link.pathMode === "straight") {
+          return `M${sAnchorX},${sAnchorY} L${tAnchorX},${tAnchorY}`;
+        }
+
+        // Otherwise, use the edge-aware (orthogonal) algorithm.
+        // Determine which edge is used on source and target based on the anchor.
+        const sourceEdge = Link.determineEdge(s, sAnchorX, sAnchorY);
+        const targetEdge = Link.determineEdge(t, tAnchorX, tAnchorY);
+
+        // Fixed protrusion distance from the node edge to create the perpendicular segment.
+        const d = 20;
+
+        // Calculate the "exit point" on the source node.
+        let sExitX = sAnchorX, sExitY = sAnchorY;
+        if (sourceEdge === "left") {
+          sExitX = s.x - d;
+        } else if (sourceEdge === "right") {
+          sExitX = s.x + s.width + d;
+        } else if (sourceEdge === "top") {
+          sExitY = s.y - d;
+        } else if (sourceEdge === "bottom") {
+          sExitY = s.y + s.height + d;
+        }
+
+        // Calculate the "entry point" on the target node.
+        let tEntryX = tAnchorX, tEntryY = tAnchorY;
+        if (targetEdge === "left") {
+          tEntryX = t.x - d;
+        } else if (targetEdge === "right") {
+          tEntryX = t.x + t.width + d;
+        } else if (targetEdge === "top") {
+          tEntryY = t.y - d;
+        } else if (targetEdge === "bottom") {
+          tEntryY = t.y + t.height + d;
+        }
+
+        // Create a middle route. Here we use a simple approach where we take the mid‑point between the two exit/entry x‑coordinates.
+        const midX = (sExitX + tEntryX) / 2;
+
+        // Build the complete path as a single-line string.
+        const path = `M${sAnchorX},${sAnchorY} ` +
+          `L${sExitX},${sExitY} ` +
+          `L${midX},${sExitY} ` +
+          `L${midX},${tEntryY} ` +
+          `L${tEntryX},${tEntryY} ` +
+          `L${tAnchorX},${tAnchorY}`;
+        return path;
+      }
+
+      static orthogonalPath(x1, y1, x2, y2) {
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        if (dx > dy) {
+          // horizontal first
+          const midX = (x1 + x2) / 2;
+          return `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`;
+        } else {
+          // vertical first
+          const midY = (y1 + y2) / 2;
+          return `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`;
+        }
+      }
+      static determineEdge(node, anchorX, anchorY) {
+        const leftDist = Math.abs(anchorX - node.x);
+        const rightDist = Math.abs((node.x + node.width) - anchorX);
+        const topDist = Math.abs(anchorY - node.y);
+        const bottomDist = Math.abs((node.y + node.height) - anchorY);
+
+        const minDist = Math.min(leftDist, rightDist, topDist, bottomDist);
+
+        if (minDist === leftDist) return "left";
+        if (minDist === rightDist) return "right";
+        if (minDist === topDist) return "top";
+        return "bottom";
+      }
+    }
+
+    /***************************************************************
+     * 5) Main Diagram Class
+     ***************************************************************/
+    class Diagram {
+      constructor(nodes, links) {
+        this.nodes = [];
+        this.links = [];
+        this.nodeDefs = nodes;
+        this.linkDefs = links;
+        this.currentZoom = 0.57; // Track current zoom level
+        this.selectedNode = null; // Track currently selected node
+        this.selectedConnection = null; // Track currently selected connection
+        this.locked = false; // Track if editing is locked
+      }
+
+      initialize() {
+        // Build Node objects
+        this.nodeDefs.forEach(nd => {
+          let node = new Node(nd);
+          this.nodes.push(node);
+        });
+        // Build Link objects
+        this.linkDefs.forEach(ld => {
+          let s = this.nodes.find(n => n.id === ld.source);
+          let t = this.nodes.find(n => n.id === ld.target);
+          if (s && t) {
+            let link = new Link(ld, s, t);
+            this.links.push(link);
+            s.addLink(link);
+            t.addLink(link);
+          }
+        });
+      }
+
+      render(selector) {
+        // Create main SVG
+        this.svg = d3.select(selector)
+          .append("svg")
+          .attr("width", "100%")
+          .attr("height", "100%")
+          .attr("viewBox", "0 0 1200 900")
+          .attr("preserveAspectRatio", "xMidYMid meet");
+
+        this.zoomGroup = this.svg.append("g").attr("class", "zoom-group");
+        this.defineDefs();
+
+        // Add title directly to the SVG
+        this.svg.append("text")
+          .attr("class", "diagram-title")
+          .attr("x", 600)
+          .attr("y", 30)
+          .text("Enterprise Architecture Diagram");
+
+        this.mainContainer = this.zoomGroup.append("g");
+
+        // Zoom behavior
+        let zoomBehavior = d3.zoom()
+          .scaleExtent([0.5, 4])
+          .on("zoom", (event) => {
+            this.zoomGroup.attr("transform", event.transform);
+            // Update current zoom from transform (for direct mouse zooming)
+            this.currentZoom = event.transform.k;
+          });
+        this.svg.call(zoomBehavior);
+
+        // Draw links first
+        this.links.forEach(l => l.createPath(this.mainContainer));
+        // Draw nodes
+        this.nodes.forEach(n => n.createGroup(this.mainContainer));
+
+        // Animate data flow
+        setTimeout(() => {
+          this.createDataFlowArrows();
+        }, 500);
+
+        // Create legend
+        this.createLegend();
+
+        // Hook up top controls
+        this.createControls(zoomBehavior);
+
+        // Clicking background => reset details
+        this.svg.on("click", (event) => {
+          if (event.target.tagName === "svg") {
+            Diagram.resetConnectionDetails();
+          }
+        });
+
+        // Initialize keyboard shortcuts panel
+        const shortcutsPanel = document.getElementById("keyboard-shortcuts-panel");
+        shortcutsPanel.classList.remove("hidden"); // Start with shortcuts visible
+
+        // Set initial zoom and center the diagram
+        const initialTransform = d3.zoomIdentity
+          .translate(600, 450) // Center of the viewBox
+          .scale(0.573)
+          .translate(-450, -400); // Translate back to original position
+
+        this.svg.call(zoomBehavior.transform, initialTransform);
+        this.currentZoom = 0.573;
+      }
+
+      resetPositions() {
+        this.nodes.forEach(n => n.resetPosition());
+        this.links.forEach(l => l.updatePath());
+      }
+
+      createControls(zoomBehavior) {
+        // Gear toggles the toolbar buttons show/hide, leaving itself visible
+        let toolbarRow = document.querySelector("#top-controls .toolbar-row");
+        let toggleBtn = document.getElementById("toggle-settings");
+        toggleBtn.addEventListener("click", () => {
+          toolbarRow.classList.toggle("hidden");
+        });
+
+        // Zoom in
+        document.getElementById("zoom-in").addEventListener("click", () => {
+          this.currentZoom = Math.min(this.currentZoom * 1.3, 4);
+          this.svg.transition().duration(300).call(zoomBehavior.scaleTo, this.currentZoom);
+        });
+        // Zoom out
+        document.getElementById("zoom-out").addEventListener("click", () => {
+          this.currentZoom = Math.max(this.currentZoom * 0.7, 0.5);
+          this.svg.transition().duration(300).call(zoomBehavior.scaleTo, this.currentZoom);
+        });
+        // Zoom reset
+        document.getElementById("zoom-reset").addEventListener("click", () => {
+          this.currentZoom = 0.57;
+          this.svg.transition().duration(300).call(zoomBehavior.transform, d3.zoomIdentity.scale(this.currentZoom));
+        });
+        // Diagram reset
+        document.getElementById("reset-diagram").addEventListener("click", () => {
+          this.resetPositions();
+          this.currentZoom = 0.57;
+          this.svg.transition().duration(300).call(zoomBehavior.transform, d3.zoomIdentity.scale(this.currentZoom));
+
+        });
+        // Save config
+        document.getElementById("save-config").addEventListener("click", () => {
+          this.exportLinkConfig();
+        });
+
+        // Toggle lock/unlock
+        const lockBtn = document.getElementById("toggle-lock");
+        lockBtn.addEventListener("click", () => {
+          this.locked = !this.locked;
+
+          // Update button appearance
+          if (this.locked) {
+            lockBtn.textContent = "🔒";
+            lockBtn.classList.remove("unlocked");
+            lockBtn.classList.add("locked");
+            lockBtn.title = "Unlock Editing";
+          } else {
+            lockBtn.textContent = "🔓";
+            lockBtn.classList.remove("locked");
+            lockBtn.classList.add("unlocked");
+            lockBtn.title = "Lock Editing";
+          }
+
+          // Show/hide keyboard shortcuts panel
+          const shortcutsPanel = document.getElementById("keyboard-shortcuts-panel");
+          if (this.locked) {
+            shortcutsPanel.classList.add("hidden");
+          } else {
+            shortcutsPanel.classList.remove("hidden");
+          }
+
+          // If locked, clear any selections
+          if (this.locked) {
+            this.selectedNode = null;
+            this.selectedConnection = null;
+            d3.selectAll(".link").classed("active", false);
+            d3.selectAll(".node rect").classed("active-node", false);
+          }
+        });
+      }
+
+      exportLinkConfig() {
+        // Gather positions & offsets
+        let configObj = {
+          links: {},
+          nodes: {},
+          viewState: {
+            zoom: this.currentZoom
+          }
+        };
+
+        this.links.forEach(link => {
+          configObj.links[link.id] = {
+            sourceOffsetX: link.sourceOffsetX,
+            sourceOffsetY: link.sourceOffsetY,
+            targetOffsetX: link.targetOffsetX,
+            targetOffsetY: link.targetOffsetY,
+            pathMode: link.pathMode
+          };
+        });
+
+        this.nodes.forEach(node => {
+          // We'll store top-left x,y but also centerX, centerY
+          let centerX = node.x + node.width / 2;
+          let centerY = node.y + node.height / 2;
+
+          configObj.nodes[node.id] = {
+            x: node.x,
+            y: node.y,
+            width: node.width,
+            height: node.height,
+            centerX: centerX,
+            centerY: centerY
+          };
+        });
+
+        let jsonStr = JSON.stringify(configObj, null, 2);
+        let blob = new Blob([jsonStr], { type: "application/json" });
+        let url = URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "diagram-config.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        alert("Config file saved.\nCheck your downloads for 'diagram-config.json'.\n(Includes node positions, connection settings, and current zoom level)");
+      }
+
+      createDataFlowArrows() {
+        let arrowsGroup = this.mainContainer.append("g").attr("class", "data-flow-arrows");
+
+        // Helper function for angle smoothing with proper wrapping
+        function smoothAngle(current, target, factor) {
+          let diff = ((target - current + 180) % 360) - 180;
+          return current + diff * factor;
+        }
+
+        this.links.forEach(link => {
+          // Get the SVG path element
+          let pathEl = document.getElementById("link-" + link.id);
+          if (!pathEl) return;
+
+          // Validate path length
+          let pathLen = pathEl.getTotalLength();
+          if (pathLen < 10) return;
+
+          // Get color for this connection type
+          let srcColor = colorMap[link.type];
+
+          // Number of arrows per connection
+          const arrowCount = 4;
+
+          // Define a fixed uniform arrow speed for all arrows (adjust as necessary)
+          const uniformSpeed = 0.0001;
+
+          // Track each arrow's last angle for smoothing
+          const lastAngles = new Array(arrowCount).fill(0);
+
+          for (let i = 0; i < arrowCount; i++) {
+            // Create the arrow shape
+            let arrow = arrowsGroup.append("path")
+              .attr("d", "M-4,-3 L2,0 L-4,3 Z")
+              .attr("fill", srcColor)
+              .attr("stroke", srcColor)
+              .attr("stroke-width", 0.5)
+              .attr("opacity", 0.95);
+
+            // Evenly distribute arrows along the path
+            let startOffset = i / arrowCount;
+
+            // Use the uniform speed for all arrows
+            let speed = uniformSpeed;
+
+            // Animation function
+            function animateFlow(timestamp) {
+              // Recalculate the path length dynamically on each frame:
+              const currentPathLen = pathEl.getTotalLength();
+
+              // Calculate fraction along the path
+              let dist = ((timestamp * speed) + startOffset) % 1;
+
+              // Define an offset (in pixels) to account for arrow size or marker spacing
+              const arrowOffset = 5; // adjust as necessary
+
+              // Use the updated path length
+              let effectiveLength = Math.max(0, currentPathLen - arrowOffset);
+
+              // Compute arrow position using the effective length
+              let point = pathEl.getPointAtLength(dist * effectiveLength);
+
+              // Calculate the next point for rotation/direction
+              let nextPoint = pathEl.getPointAtLength(Math.min((dist + 0.01) * effectiveLength, effectiveLength));
+              let dx = nextPoint.x - point.x;
+              let dy = nextPoint.y - point.y;
+
+              let targetAngle = lastAngles[i];
+              if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
+                targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                if (link.pathMode === "orth") {
+                  if (Math.abs(dx) > 5 * Math.abs(dy)) {
+                    targetAngle = dx > 0 ? 0 : 180;
+                  } else if (Math.abs(dy) > 5 * Math.abs(dx)) {
+                    targetAngle = dy > 0 ? 90 : 270;
+                  }
+                }
+              }
+              let smoothFactor = link.pathMode === "orth" ? 0.3 : 0.15;
+              lastAngles[i] = smoothAngle(lastAngles[i], targetAngle, smoothFactor);
+
+              // Update arrow position and rotation
+              arrow.attr("transform", `translate(${point.x},${point.y}) rotate(${lastAngles[i]})`);
+
+              // Continue the animation loop
+              requestAnimationFrame(animateFlow);
+            }
+
+            // Start animation
+            requestAnimationFrame(animateFlow);
+          }
+        });
+
+      }
+
+      createLegend() {
+        const legendData = [
+          { name: "Client Layer", color: colorMap.client },
+          { name: "Frontend Layer", color: colorMap.frontend },
+          { name: "App Layer", color: colorMap.app },
+          { name: "Authentication Layer", color: colorMap.auth },
+          { name: "Backend Layer", color: colorMap.backend },
+          { name: "Storage Layer", color: colorMap.storage },
+          { name: "Database Layer", color: colorMap.database },
+          { name: "Cloud Infrastructure", color: colorMap.cloud },
+          { name: "CI/CD & Source Ctrl", color: colorMap.cicd }
+        ];
+
+        let legend = d3.select("#legend");
+        legend.selectAll(".legend-item")
+          .data(legendData)
+          .enter()
+          .append("div")
+          .attr("class", "legend-item")
+          .html(function (d) {
+            return `
+              <div class="legend-color" style="background-color: ${d.color};"></div>
+              <div>${d.name}</div>
+            `;
+          });
+
+        // Add a line for "Data Flow" (dashed line + arrow)
+        legend.append("div")
+          .attr("class", "legend-item")
+          .html(`
+            <svg width="30" height="6" style="margin-right: 8px;">
+              <line x1="0" y1="3" x2="30" y2="3" stroke="#666" stroke-width="1.5" stroke-dasharray="5,3"></line>
+              <polygon points="30,3 25,1 25,5" fill="#fff"></polygon>
+            </svg>
+            <div>Data Flow</div>
+          `);
+      }
+
+      defineDefs() {
+        let defs = this.svg.append("defs");
+
+        // Drop shadow
+        let filter = defs.append("filter")
+          .attr("id", "drop-shadow")
+          .attr("height", "130%");
+        filter.append("feGaussianBlur")
+          .attr("in", "SourceAlpha")
+          .attr("stdDeviation", 3)
+          .attr("result", "blur");
+        filter.append("feOffset")
+          .attr("in", "blur")
+          .attr("dx", 2)
+          .attr("dy", 2)
+          .attr("result", "offsetBlur");
+        let feComp = filter.append("feComponentTransfer")
+          .attr("in", "offsetBlur")
+          .attr("result", "offsetBlur");
+        feComp.append("feFuncA")
+          .attr("type", "linear")
+          .attr("slope", 0.3);
+        let feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode").attr("in", "offsetBlur");
+        feMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+        // Create colored arrow markers for each connection type
+        Object.keys(colorMap).forEach(type => {
+          // Arrow marker for each connection type
+          defs.append("marker")
+            .attr("id", `arrow-${type}`)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 10)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("class", "link-arrow")
+            .attr("fill", colorMap[type]);
+
+          // Data flow arrow marker for each type
+          defs.append("marker")
+            .attr("id", `data-arrow-${type}`)
+            .attr("viewBox", "0 -3 6 6")
+            .attr("refX", 6)
+            .attr("refY", 0)
+            .attr("markerWidth", 4)
+            .attr("markerHeight", 4)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("d", "M0,-3L6,0L0,3")
+            .attr("class", "data-arrow")
+            .attr("fill", colorMap[type]);
+        });
+
+        // layer box gradients
+        gradientDefinitions.forEach(function (g) {
+          let grad = defs.append("linearGradient")
+            .attr("id", g.id)
+            .attr("x1", "0%")
+            .attr("y1", "0%")
+            .attr("x2", "0%")
+            .attr("y2", "100%");
+          grad.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", g.start);
+          grad.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", g.end);
+        });
+      }
+
+      /***************************************************************
+       * 6) Show/Reset Details
+       ***************************************************************/
+      static resetConnectionDetails() {
+        const sidebar = document.getElementById("connection-details");
+        sidebar.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">ⓘ</div>
+            <p>Click on any connection (C1-C14) to view/edit offsets &amp; path mode.</p>
+            <p>Or click on a layer to view details about that layer.</p>
+            <p><strong>TIP:</strong> Use arrow keys to move selected layers or adjust connections.</p>
+          </div>
+        `;
+        // remove highlight
+        d3.selectAll(".link").classed("active", false);
+        d3.selectAll(".node rect").classed("active-node", false);
+
+        // Clear selected nodes and connections
+        if (window.diagramInstance) {
+          window.diagramInstance.selectedNode = null;
+          window.diagramInstance.selectedConnection = null;
+        }
+      }
+
+      static showConnectionDetails(linkObj) {
+        const details = connectionDetails[linkObj.id];
+        if (!details) return;
+        const color = colorMap[linkObj.type];
+        const isLocked = window.diagramInstance?.locked || false;
+
+        // Set as selected connection for keyboard control (only if not locked)
+        if (window.diagramInstance && !isLocked) {
+          window.diagramInstance.selectedNode = null;
+          window.diagramInstance.selectedConnection = linkObj;
+        }
+
+        // Collapsible form for offsets - only show if not locked
+        const offsetFormHtml = isLocked ? '' : `
+          <button class="form-collapse-toggle" id="toggle-conn-controls">Edit Connection Controls</button>
+          <div class="control-form" id="conn-controls">
+            <div class="form-group">
+              <label>Source X</label>
+              <input id="source-offsetx" type="number" step="0.1" min="0" max="1" value="${linkObj.sourceOffsetX}" />
+            </div>
+            <div class="form-group">
+              <label>Source Y</label>
+              <input id="source-offsety" type="number" step="0.1" min="0" max="1" value="${linkObj.sourceOffsetY}" />
+            </div>
+            <div class="form-group">
+              <label>Target X</label>
+              <input id="target-offsetx" type="number" step="0.1" min="0" max="1" value="${linkObj.targetOffsetX}" />
+            </div>
+            <div class="form-group">
+              <label>Target Y</label>
+              <input id="target-offsety" type="number" step="0.1" min="0" max="1" value="${linkObj.targetOffsetY}" />
+            </div>
+            <div class="form-group">
+              <label>Path Mode</label>
+              <select id="path-mode">
+                <option value="orth" ${linkObj.pathMode === "orth" ? "selected" : ""}>Orthogonal</option>
+                <option value="straight" ${linkObj.pathMode === "straight" ? "selected" : ""}>Straight</option>
+              </select>
+            </div>
+            <button id="apply-offsets">Apply Changes</button>
+          </div>
+        `;
+
+        const html = `
+          <div class="details-header">
+            <h2 class="details-title">
+              <span class="connection-id" style="background-color:${color}">${linkObj.id}</span>
+              ${details.title}
+            </h2>
+          </div>
+          <div class="details-content">
+            <p>${details.description}</p>
+            <h3 class="details-subtitle">Communication Details</h3>
+            <div>
+              <strong>Protocol:</strong> ${details.protocol}<br>
+              <strong>Data Flow:</strong> ${details.dataFlow}<br>
+              <strong>Business Impact:</strong> ${details.businessImpact}
+            </div>
+            <h3 class="details-subtitle">Technical Stack</h3>
+            <div class="details-tech-stack">
+              ${details.technicalStack.map(t => `<div class="tech-item">• ${t}</div>`).join("")}
+            </div>
+            <h3 class="details-subtitle">Connection Path</h3>
+            <div>
+              <strong>From:</strong> ${layerDetails[linkObj.source.id].title}<br>
+              <strong>To:</strong> ${layerDetails[linkObj.target.id].title}
+            </div>
+            ${offsetFormHtml}
+          </div>
+        `;
+        document.getElementById("connection-details").innerHTML = html;
+
+        // highlight link, un-highlight nodes
+        d3.selectAll(".link").classed("active", false);
+        d3.select(`#link-${linkObj.id}`).classed("active", true);
+        d3.selectAll(".node rect").classed("active-node", false);
+
+        // Toggle the offset form with a single click - fixed
+        const toggleBtn = document.getElementById("toggle-conn-controls");
+        const connForm = document.getElementById("conn-controls");
+
+        toggleBtn.addEventListener("click", function () {
+          connForm.classList.toggle("show");
+          toggleBtn.classList.toggle("active");
+        });
+
+        // Function to apply changes
+        const applyChanges = function () {
+          let sx = parseFloat(document.getElementById("source-offsetx").value);
+          let sy = parseFloat(document.getElementById("source-offsety").value);
+          let tx = parseFloat(document.getElementById("target-offsetx").value);
+          let ty = parseFloat(document.getElementById("target-offsety").value);
+          let mode = document.getElementById("path-mode").value;
+
+          // Enforce limits
+          linkObj.sourceOffsetX = isNaN(sx) ? 0.5 : Math.min(1, Math.max(0, sx));
+          linkObj.sourceOffsetY = isNaN(sy) ? 0.5 : Math.min(1, Math.max(0, sy));
+          linkObj.targetOffsetX = isNaN(tx) ? 0.5 : Math.min(1, Math.max(0, tx));
+          linkObj.targetOffsetY = isNaN(ty) ? 0.5 : Math.min(1, Math.max(0, ty));
+          linkObj.pathMode = (mode === "straight") ? "straight" : "orth";
+
+          // Update displayed values to show clamped values
+          document.getElementById("source-offsetx").value = linkObj.sourceOffsetX;
+          document.getElementById("source-offsety").value = linkObj.sourceOffsetY;
+          document.getElementById("target-offsetx").value = linkObj.targetOffsetX;
+          document.getElementById("target-offsety").value = linkObj.targetOffsetY;
+
+          linkObj.updatePath();
+        };
+
+        // Apply offsets button click
+        const applyBtn = document.getElementById("apply-offsets");
+        applyBtn.addEventListener("click", applyChanges);
+
+        // Add Enter key support on inputs
+        const formInputs = connForm.querySelectorAll("input, select");
+        formInputs.forEach(input => {
+          input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              applyChanges();
+            }
+          });
+        });
+      }
+
+      static showNodeDetails(nodeObj) {
+        const details = layerDetails[nodeObj.id];
+        if (!details) return;
+        const color = colorMap[nodeObj.id];
+        const isLocked = window.diagramInstance?.locked || false;
+
+        // Set as selected node for keyboard control (only if not locked)
+        if (!isLocked) {
+          window.diagramInstance.selectedNode = nodeObj;
+        }
+
+        // We'll let user edit center X/Y plus width/height
+        // newX = centerX - node.width/2, newY = centerY - node.height/2
+        let centerX = nodeObj.x + nodeObj.width / 2;
+        let centerY = nodeObj.y + nodeObj.height / 2;
+
+        // Fixed to toggle on first click, now including width/height controls
+        // Only show controls if not locked
+        const layerFormHtml = isLocked ? '' : `
+          <button class="form-collapse-toggle" id="toggle-layer-controls">Edit Layer Position & Size</button>
+          <div class="control-form" id="layer-controls">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Center X</label>
+                <input type="number" step="1" id="layer-center-x" value="${Math.round(centerX)}" />
+              </div>
+              <div class="form-group">
+                <label>Center Y</label>
+                <input type="number" step="1" id="layer-center-y" value="${Math.round(centerY)}" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Width</label>
+                <input type="number" step="1" id="layer-width" value="${Math.round(nodeObj.width)}" min="100" />
+              </div>
+              <div class="form-group">
+                <label>Height</label>
+                <input type="number" step="1" id="layer-height" value="${Math.round(nodeObj.height)}" min="80" />
+              </div>
+            </div>
+            <button id="apply-layer-pos">Apply Changes</button>
+          </div>
+        `;
+
+        const html = `
+          <div class="details-header">
+            <h2 class="details-title">
+              <span class="connection-id" style="background-color:${color}">${details.title.charAt(0)}</span>
+              ${details.title}
+            </h2>
+          </div>
+          <div class="details-content">
+            <p>${details.description}</p>
+            <h3 class="details-subtitle">Key Responsibilities</h3>
+            <div class="details-tech-stack">
+              ${details.responsibilities.map(r => `<div class="tech-item">• ${r}</div>`).join("")}
+            </div>
+            <h3 class="details-subtitle">Technologies</h3>
+            <div class="details-tech-stack">
+              ${details.technologies.map(t => `<div class="tech-item">• ${t}</div>`).join("")}
+            </div>
+            <h3 class="details-subtitle">Key Challenges</h3>
+            <p>${details.challenges}</p>
+            ${layerFormHtml}
+          </div>
+        `;
+        document.getElementById("connection-details").innerHTML = html;
+
+        // highlight node's rect, unhighlight links
+        d3.selectAll(".link").classed("active", false);
+        d3.selectAll(".node rect").classed("active-node", false);
+        d3.select(`#node-${nodeObj.id} rect`).classed("active-node", true);
+
+        // Toggle the layer form - fixed to toggle on first click
+        const toggleLayerBtn = document.getElementById("toggle-layer-controls");
+        const layerForm = document.getElementById("layer-controls");
+
+        toggleLayerBtn.addEventListener("click", function () {
+          layerForm.classList.toggle("show");
+          toggleLayerBtn.classList.toggle("active");
+        });
+
+        // Function to apply changes
+        const applyChanges = function () {
+          let cx = parseFloat(document.getElementById("layer-center-x").value);
+          let cy = parseFloat(document.getElementById("layer-center-y").value);
+          let width = parseFloat(document.getElementById("layer-width").value);
+          let height = parseFloat(document.getElementById("layer-height").value);
+
+          // Validate inputs
+          if (!isNaN(cx) && !isNaN(cy) && !isNaN(width) && !isNaN(height)) {
+            // Save original values for rectangle resize
+            let oldWidth = nodeObj.width;
+            let oldHeight = nodeObj.height;
+
+            // Update node properties
+            nodeObj.width = Math.max(100, width);
+            nodeObj.height = Math.max(80, height);
+            nodeObj.x = cx - nodeObj.width / 2;
+            nodeObj.y = cy - nodeObj.height / 2;
+
+            // Update rectangle size
+            nodeObj.group.select("rect")
+              .attr("width", nodeObj.width)
+              .attr("height", nodeObj.height);
+
+            // Update title position
+            nodeObj.group.select(".title")
+              .attr("x", nodeObj.width / 2);
+
+            // Update divider line
+            nodeObj.group.select("line")
+              .attr("x2", nodeObj.width - 12);
+
+            // Update node position
+            nodeObj.group.attr("transform", `translate(${nodeObj.x},${nodeObj.y})`);
+
+            // Update any connected links
+            nodeObj.links.forEach(link => link.updatePath());
+          }
+        };
+
+        // Apply button click
+        document.getElementById("apply-layer-pos").addEventListener("click", applyChanges);
+
+        // Add Enter key support on inputs
+        const formInputs = layerForm.querySelectorAll("input");
+        formInputs.forEach(input => {
+          input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              applyChanges();
+            }
+          });
+        });
+      }
+
+      /***************************************************************
+       * Helper: wrapText
+       ***************************************************************/
+      static wrapText(d3TextEl, maxWidth) {
+        const textNode = d3TextEl.node();
+        if (!textNode) return;
+        const textContent = textNode.textContent || "";
+        const words = textContent.split(/\s+/).reverse();
+        let line = [];
+        let lineNumber = 0;
+        const lineHeight = 1.2;
+        const x = d3TextEl.attr("x") || 0;
+        let y = parseFloat(d3TextEl.attr("y") || "0");
+        const dy = 0;
+        d3TextEl.text(null);
+
+        let tspan = d3TextEl.append("tspan")
+          .attr("x", x)
+          .attr("y", y)
+          .attr("dy", dy + "em")
+          .attr("font-size", 12)
+          .text("");
+
+        let word;
+        while ((word = words.pop())) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node().getComputedTextLength() > maxWidth) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            lineNumber++;
+            tspan = d3TextEl.append("tspan")
+              .attr("x", x)
+              .attr("y", y)
+              .attr("dy", (lineNumber * lineHeight) + "em")
+              .attr("font-size", 12)
+              .text(word);
+          }
+        }
+      }
+
+    }
+
+    /***************************************************************
+     * 7) Instantiate & Render
+     ***************************************************************/
+    const diagram = new Diagram(nodeData, linkData);
+    // Store instance globally to allow keyboard control access
+    window.diagramInstance = diagram;
+    diagram.initialize();
+    diagram.locked = true; // Lock editing at start
+    diagram.render("#diagram");
+    Diagram.resetConnectionDetails();
+
+    // Update lock button appearance to reflect locked state
+    const lockBtn = document.getElementById("toggle-lock");
+    lockBtn.textContent = "🔒";
+    lockBtn.classList.remove("unlocked");
+    lockBtn.classList.add("locked");
+    lockBtn.title = "Unlock Editing";
+
+    const shortcutsPanel = document.getElementById("keyboard-shortcuts-panel");
+    shortcutsPanel.classList.add("hidden");
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const toggleButton = document.getElementById('toggle-sidebar-btn');
+      const sidebar = document.getElementById('connection-details');
+
+      if (toggleButton && sidebar) {
+        // Set initial position based on sidebar state (assume open)
+        toggleButton.style.right = "360px";
+
+        toggleButton.addEventListener("click", () => {
+          const isClosed = sidebar.classList.toggle("closed");
+          // Adjust button position when toggling
+          if (isClosed) {
+            // Sidebar closed; place button at far right of viewport
+            toggleButton.style.right = "30px";
+          } else {
+            // Sidebar open; place button at the left edge of the sidebar
+            toggleButton.style.right = "360px";
+          }
+        });
+      }
+    });
+
+
+    // Add keyboard arrow control for selected node or connection
+    document.addEventListener('keydown', function (event) {
+      const diagram = window.diagramInstance;
+      if (!diagram || diagram.locked) return; // Skip if diagram is locked
+
+      // Handle node movement with arrow keys
+      if (diagram.selectedNode) {
+        const node = diagram.selectedNode;
+        const moveStep = event.shiftKey ? 10 : 1;
+        let moved = false;
+
+        switch (event.key) {
+          case 'ArrowUp':
+            node.y -= moveStep;
+            moved = true;
+            break;
+          case 'ArrowDown':
+            node.y += moveStep;
+            moved = true;
+            break;
+          case 'ArrowLeft':
+            node.x -= moveStep;
+            moved = true;
+            break;
+          case 'ArrowRight':
+            node.x += moveStep;
+            moved = true;
+            break;
+        }
+
+        if (moved) {
+          event.preventDefault();
+          // Update node position
+          node.group.attr("transform", `translate(${node.x},${node.y})`);
+          // Update connected links
+          node.links.forEach(link => link.updatePath());
+
+          // Update form values if the sidebar is showing this node
+          const centerXInput = document.getElementById('layer-center-x');
+          const centerYInput = document.getElementById('layer-center-y');
+          if (centerXInput && centerYInput) {
+            const centerX = node.x + node.width / 2;
+            const centerY = node.y + node.height / 2;
+            centerXInput.value = Math.round(centerX);
+            centerYInput.value = Math.round(centerY);
+          }
+        }
+      }
+      // Handle connection adjustments with arrow keys
+      else if (diagram.selectedConnection) {
+        const link = diagram.selectedConnection;
+        const step = 0.05; // Adjustment step for offsets (0-1 range)
+        let changed = false;
+
+        // Default mode: adjust source offsets
+        // With shift: adjust target offsets
+        if (!event.shiftKey) {
+          // Source offset adjustments
+          switch (event.key) {
+            case 'ArrowLeft':
+              link.sourceOffsetX = Math.max(0, Math.min(1, link.sourceOffsetX - step));
+              changed = true;
+              break;
+            case 'ArrowRight':
+              link.sourceOffsetX = Math.max(0, Math.min(1, link.sourceOffsetX + step));
+              changed = true;
+              break;
+            case 'ArrowUp':
+              link.sourceOffsetY = Math.max(0, Math.min(1, link.sourceOffsetY - step));
+              changed = true;
+              break;
+            case 'ArrowDown':
+              link.sourceOffsetY = Math.max(0, Math.min(1, link.sourceOffsetY + step));
+              changed = true;
+              break;
+          }
+        } else {
+          // Target offset adjustments (with shift key)
+          switch (event.key) {
+            case 'ArrowLeft':
+              link.targetOffsetX = Math.max(0, Math.min(1, link.targetOffsetX - step));
+              changed = true;
+              break;
+            case 'ArrowRight':
+              link.targetOffsetX = Math.max(0, Math.min(1, link.targetOffsetX + step));
+              changed = true;
+              break;
+            case 'ArrowUp':
+              link.targetOffsetY = Math.max(0, Math.min(1, link.targetOffsetY - step));
+              changed = true;
+              break;
+            case 'ArrowDown':
+              link.targetOffsetY = Math.max(0, Math.min(1, link.targetOffsetY + step));
+              changed = true;
+              break;
+          }
+        }
+
+        // Toggle path mode with space
+        if (event.key === ' ') {
+          link.pathMode = link.pathMode === 'straight' ? 'orth' : 'straight';
+          changed = true;
+
+          // Update select in the form if visible
+          const pathModeSelect = document.getElementById('path-mode');
+          if (pathModeSelect) {
+            pathModeSelect.value = link.pathMode;
+          }
+
+          event.preventDefault();
+        }
+
+        if (changed) {
+          event.preventDefault();
+          // Update the path
+          link.updatePath();
+
+          // Update form values if the sidebar is showing this connection
+          const sourceXInput = document.getElementById('source-offsetx');
+          const sourceYInput = document.getElementById('source-offsety');
+          const targetXInput = document.getElementById('target-offsetx');
+          const targetYInput = document.getElementById('target-offsety');
+
+          if (sourceXInput && sourceYInput && targetXInput && targetYInput) {
+            sourceXInput.value = link.sourceOffsetX.toFixed(2);
+            sourceYInput.value = link.sourceOffsetY.toFixed(2);
+            targetXInput.value = link.targetOffsetX.toFixed(2);
+            targetYInput.value = link.targetOffsetY.toFixed(2);
+          }
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
