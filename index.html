@@ -668,39 +668,26 @@
      * 2) Layer & Connection Details
      ***************************************************************/
     const layerDetails = {
-      client: {
-        title: "Client Layer",
-        description: "All end-user interfaces (web, mobile, desktop).",
-        responsibilities: [
-          "UI rendering",
-          "Local state mgmt",
-          "User input handling",
-          "Initial form validation"
-        ],
-        technologies: [
-          "Web (HTML/CSS/JS)",
-          "Mobile (Swift, Kotlin)",
-          "Desktop (Electron, .NET)"
-        ],
-        challenges: "Must handle various device/screen constraints, plus offline or slow networks."
-      },
+      // Client layer removed
+
       frontend: {
-        title: "Frontend Layer",
-        description: "Presentation logic, state management, and API client services.",
+        title: "Next.js Frontend Layer",
+        description: "Server-side rendering and client-side hydration framework with built-in API routes, file-based routing, and integrated React Server Components.",
         responsibilities: [
-          "UI component architecture",
-          "State mgmt",
-          "API data fetching",
-          "Asset optimization & delivery"
+          "SSR/SSG/ISR rendering",
+          "React Server Components",
+          "Client-side state & interactions",
+          "Form validation & submission"
         ],
         technologies: [
-          "React/Angular/Vue",
-          "Redux / MobX",
-          "CDN configs",
-          "JS bundlers"
+          "Next.js App/Pages Router",
+          "React with TypeScript",
+          "TailwindCSS/Shadcn UI",
+          "SWR/React Query"
         ],
-        challenges: "Balance performance & features, possibly handle offline mode."
+        challenges: "Balancing server vs. client rendering, optimizing for performance and SEO, handling data fetching with proper caching strategies."
       },
+
       app: {
         title: "App Layer",
         description: "API gateway, load balancing, request routing, caching, rate limiting.",
@@ -718,40 +705,43 @@
         ],
         challenges: "Handle high volume while maintaining low latency & failover."
       },
+
       auth: {
         title: "Authentication Layer",
-        description: "User auth, SSO, token issuance, access policies.",
+        description: "User authentication, authorization, token management, and access control.",
         responsibilities: [
-          "User auth",
+          "User authentication",
           "Token validation",
           "Access control enforcement",
           "SSO integration"
         ],
         technologies: [
-          "OAuth2 / OIDC",
-          "JWT tokens",
-          "RBAC/ABAC",
-          "IdP federation"
+          "NextAuth.js / Clerk",
+          "JWT / OAuth2",
+          "RBAC permissions",
+          "Social login providers"
         ],
-        challenges: "Strict security with multiple auth methods, SSO, user convenience."
+        challenges: "Balancing security with user experience, handling session persistence, implementing proper role-based access control."
       },
+
       backend: {
         title: "Backend Layer",
-        description: "Core business logic, domain operations, microservices, worker processes.",
+        description: "Serverless functions and microservices that implement business logic, process data, and handle API requests.",
         responsibilities: [
-          "Business rules",
-          "Domain modeling",
-          "Integration with external services",
-          "Long-running tasks"
+          "Business logic implementation",
+          "Data processing & validation",
+          "API endpoints",
+          "Background job processing"
         ],
         technologies: [
-          "Microservice frameworks",
-          "Event-driven architecture",
-          "DDD patterns",
-          "Async queueing"
+          "Node.js/Express",
+          "Serverless functions",
+          "tRPC/REST APIs",
+          "Message queues (SQS/RabbitMQ)"
         ],
-        challenges: "Data consistency, scaling, independent deployability of microservices."
+        challenges: "Scaling with demand, managing serverless cold starts, ensuring consistent data handling across services."
       },
+
       storage: {
         title: "Storage Layer",
         description: "Unstructured data storage, file mgmt, content delivery, backups.",
@@ -769,93 +759,88 @@
         ],
         challenges: "Large file transfers, cost efficiency, durability, cross-region replication."
       },
+
       database: {
         title: "Database Layer",
-        description: "Data persistence, queries, read replicas, data warehousing.",
+        description: "Data persistence using relational and NoSQL databases with ORM integration.",
         responsibilities: [
-          "Transactional storage",
-          "Complex queries",
-          "Replication & sharding",
-          "Analytics & reporting"
+          "Data persistence & retrieval",
+          "Schema management",
+          "Query optimization",
+          "Data replication & backups"
         ],
         technologies: [
           "PostgreSQL / MySQL",
-          "NoSQL (Mongo/Cassandra)",
-          "Data warehouses",
-          "DB caching & indexing"
+          "Prisma / Drizzle ORM",
+          "MongoDB / Redis",
+          "Connection pooling"
         ],
-        challenges: "Balance performance, consistency, availability. Scale with data growth."
+        challenges: "Choosing the right database for each data type, managing migrations, scaling with data growth."
       },
+
       cloud: {
         title: "Cloud Infrastructure",
-        description: "Compute, networking, & platform services for the entire system.",
+        description: "Serverless deployment platforms optimized for Next.js and modern microservices.",
         responsibilities: [
           "Compute provisioning",
           "Network security",
-          "HA config",
+          "HA configuration",
           "Autoscaling"
         ],
         technologies: [
+          "Vercel for Next.js",
           "AWS / Azure / GCP",
-          "Infra as Code",
-          "VPC & security groups",
-          "Availability zones"
+          "Serverless Framework",
+          "Infrastructure as Code"
         ],
-        challenges: "Reliable infra with robust security controls & cost mgmt."
+        challenges: "Optimizing for cost and performance, ensuring secure configurations, managing environment variables."
       },
+
       cicd: {
         title: "CI/CD & Source Control",
         description: "Automated builds, testing, deployments, and version control.",
         responsibilities: [
-          "Source mgmt",
+          "Source management",
           "Automated testing",
           "Build processes",
           "Deployment pipelines"
         ],
         technologies: [
-          "Git / GitHub / GitLab",
-          "Jenkins / GH Actions",
-          "Artifact repositories",
-          "Test frameworks"
+          "GitHub / GitLab",
+          "GitHub Actions / CircleCI",
+          "Jest / Playwright",
+          "Trunk-based development"
         ],
-        challenges: "Consistent releases, fast iteration cycles, dev productivity, rollback safety."
+        challenges: "Maintaining fast build times, implementing proper testing, ensuring zero-downtime deployments."
       }
     };
 
     const connectionDetails = {
-      "C1": {
-        title: "Client to Frontend",
-        description: "User devices interacting with the frontend layer (web, mobile, etc.).",
-        protocol: "HTTPS/WSS",
-        dataFlow: "Bidirectional",
-        technicalStack: ["TLS 1.3", "HTTP/2", "CDN caching", "WebSockets"],
-        businessImpact: "Critical - direct user experience."
-      },
-      "C2": {
+      "C1": { // Frontend to App (was C2)
         title: "Frontend to App",
-        description: "Frontend calls the App layer (API gateway/load balancer).",
-        protocol: "REST/GraphQL",
+        description: "Next.js frontend makes API calls to the App layer/API gateway.",
+        protocol: "REST/GraphQL/tRPC",
         dataFlow: "Bidirectional",
-        technicalStack: ["REST endpoints", "GraphQL queries", "JWT auth", "JSON data"],
-        businessImpact: "High - user workflows."
+        technicalStack: ["REST endpoints", "GraphQL queries", "tRPC procedures", "JSON data"],
+        businessImpact: "High - user workflows and data rendering."
       },
-      "C3": {
+      "C2": { // App to Backend (was C3)
         title: "App to Backend",
-        description: "API gateway routes requests to microservices in the backend layer.",
+        description: "API gateway routes requests to serverless functions and microservices.",
         protocol: "HTTP/gRPC",
         dataFlow: "Bidirectional",
         technicalStack: ["gRPC", "Protobuf", "Service discovery", "Circuit breakers"],
         businessImpact: "High - system coherence."
       },
-      "C4": {
+      "C3": { // Backend to Database (was C4)
         title: "Backend to Database",
-        description: "Core microservices connect to the DB for reads/writes.",
+        description: "Backend services connect to databases via ORM or direct drivers.",
         protocol: "SQL/NoSQL",
         dataFlow: "Read/Write",
-        technicalStack: ["Conn pooling", "ORM frameworks", "Prepared statements", "Read replicas"],
+        technicalStack: ["Prisma/Drizzle ORM", "Connection pooling", "Prepared statements", "Read replicas"],
         businessImpact: "Critical - persistent data."
       },
-      "C5": {
+      "C4": { // Database to Cloud Infra (was C5)
         title: "Database to Cloud Infra",
         description: "DB instances run on or interact with the cloud environment.",
         protocol: "Cloud Provider APIs",
@@ -863,39 +848,39 @@
         technicalStack: ["RDS / Cloud SQL", "Auto-scaling", "Automated backups", "Encryption"],
         businessImpact: "Medium - DB reliability ops."
       },
-      "C6": {
+      "C5": { // Backend to Cloud Infra (was C6)
         title: "Backend to Cloud Infra",
-        description: "Backend microservices are deployed & managed on the cloud.",
+        description: "Backend serverless functions are deployed & managed on the cloud.",
         protocol: "Cloud Provider APIs",
         dataFlow: "Mgmt/Control",
-        technicalStack: ["Kubernetes/ECS", "Scaling groups", "VPC networking", "Serverless"],
+        technicalStack: ["Lambda/Azure Functions", "Serverless framework", "VPC networking", "API Gateway"],
         businessImpact: "Medium - scaling & availability."
       },
-      "C7": {
+      "C6": { // Auth to App (was C7)
         title: "Auth to App",
         description: "Auth layer validates requests at the gateway for policy enforcement.",
         protocol: "Internal API",
         dataFlow: "Validation",
-        technicalStack: ["OAuth2 flows", "JWT validation", "OIDC integration", "Access policies"],
+        technicalStack: ["NextAuth.js/Clerk", "JWT validation", "OIDC integration", "Access policies"],
         businessImpact: "Critical - security gate."
       },
-      "C8": {
+      "C7": { // Auth to Backend (was C8)
         title: "Auth to Backend",
-        description: "Auth does fine-grained authorization for microservices.",
+        description: "Auth does fine-grained authorization for backend services.",
         protocol: "Internal API",
         dataFlow: "Validation/Context",
         technicalStack: ["RBAC/ABAC", "Token introspect", "Permissions", "User context mgmt"],
         businessImpact: "High - data access security."
       },
-      "C9": {
+      "C8": { // Storage to Backend (was C9)
         title: "Storage to Backend",
-        description: "Object storage for file mgmt, content delivery from backend services.",
+        description: "Object storage for file management, content delivery from backend services.",
         protocol: "S3 / Object API",
         dataFlow: "Bidirectional",
         technicalStack: ["Signed URLs", "Tiered storage", "Metadata", "Multipart uploads"],
         businessImpact: "Medium - large binary data."
       },
-      "C10": {
+      "C9": { // Storage to Cloud Infra (was C10)
         title: "Storage to Cloud Infra",
         description: "Object storage provisioned & managed via cloud infra.",
         protocol: "Cloud Provider APIs",
@@ -903,15 +888,15 @@
         technicalStack: ["S3 / Blob services", "Lifecycle policies", "Bucket replication", "Encryption"],
         businessImpact: "Low - operational overhead."
       },
-      "C11": {
+      "C10": { // CI/CD to Frontend (was C11)
         title: "CI/CD to Frontend",
-        description: "Pipelines build/test/deploy the frontend assets.",
+        description: "Pipelines build/test/deploy the Next.js frontend.",
         protocol: "Deployment Pipeline",
         dataFlow: "Build/Deploy",
-        technicalStack: ["Repo triggers", "Jest/Cypress", "Bundling", "CDN invalidation"],
+        technicalStack: ["GitHub Actions", "Jest/Cypress", "Bundling", "Vercel deployment"],
         businessImpact: "Medium - UI release velocity."
       },
-      "C12": {
+      "C11": { // CI/CD to App (was C12)
         title: "CI/CD to App",
         description: "CI/CD for the App layer, e.g. updating gateway configs, versions.",
         protocol: "Deployment Pipeline",
@@ -919,20 +904,20 @@
         technicalStack: ["API config mgmt", "Canary deploys", "Feature flags", "API versioning"],
         businessImpact: "Medium - evolving APIs smoothly."
       },
-      "C13": {
+      "C12": { // CI/CD to Backend (was C13)
         title: "CI/CD to Backend",
-        description: "Automated pipeline for backend microservices builds/deploys.",
+        description: "Automated pipeline for serverless function deployment.",
         protocol: "Deployment Pipeline",
         dataFlow: "Build/Deploy",
-        technicalStack: ["Docker builds", "Integration tests", "Config mgmt", "Secret rotation"],
+        technicalStack: ["Serverless deployment", "Integration tests", "Config mgmt", "Secret rotation"],
         businessImpact: "High - reliability & consistency."
       },
-      "C14": {
+      "C13": { // CI/CD to Database (was C14)
         title: "CI/CD to Database",
         description: "Automated DB migrations, schema changes via pipelines.",
         protocol: "Migration Scripts",
         dataFlow: "Schema Changes",
-        technicalStack: ["Flyway/Liquibase", "Rollback support", "DB version control", "Test data mgmt"],
+        technicalStack: ["Prisma migrations", "Drizzle migrations", "Rollback support", "Test data mgmt"],
         businessImpact: "Critical - data structure evolution."
       }
     };
@@ -943,24 +928,14 @@
     // Updated Node Data with Rounded Values
     let nodeData = [
       {
-        id: "client",
-        title: "CLIENT LAYER",
-        x: 401.7,
-        y: -232.8,
-        width: 320,
-        height: 125.4,
-        gradientId: "grad-client",
-        items: ["Web", "Mobile", "Desktop"]
-      },
-      {
         id: "frontend",
-        title: "FRONTEND LAYER",
+        title: "NEXT.JS FRONTEND LAYER",
         x: 402.3,
-        y: -12.0,
+        y: -12.0, // Moved up to replace client layer position
         width: 320,
         height: 146.2,
         gradientId: "grad-frontend",
-        items: ["React/Angular/Vue", "State Mgmt", "API Client", "Asset Delivery"]
+        items: ["Next.js App/Pages Router", "React Server Components", "TailwindCSS", "TypeScript/SWR"]
       },
       {
         id: "app",
@@ -980,8 +955,9 @@
         width: 260,
         height: 125.4,
         gradientId: "grad-auth",
-        items: ["OAuth2 / JWT", "User Mgmt", "SSO Integration"]
+        items: ["NextAuth.js / Clerk", "JWT/OAuth2", "RBAC Permissions"]
       },
+      // Updated backend layer
       {
         id: "backend",
         title: "BACKEND LAYER",
@@ -990,7 +966,7 @@
         width: 320,
         height: 125,
         gradientId: "grad-backend",
-        items: ["Microservices", "Business Logic", "Worker Processes"]
+        items: ["Node.js Services", "Serverless Functions", "API Endpoints", "Background Jobs"]
       },
       {
         id: "storage",
@@ -1010,7 +986,7 @@
         width: 320,
         height: 125,
         gradientId: "grad-database",
-        items: ["Primary DB", "Read Replicas", "Warehousing"]
+        items: ["PostgreSQL/MySQL", "Prisma/Drizzle ORM", "MongoDB/Redis"]
       },
       {
         id: "cloud",
@@ -1020,7 +996,7 @@
         width: 480,
         height: 125,
         gradientId: "grad-cloud",
-        items: ["AWS / Azure", "VPC / Security", "Availability Zones"]
+        items: ["Vercel", "AWS / Azure", "Serverless Deployment"]
       },
       {
         id: "cicd",
@@ -1030,24 +1006,13 @@
         width: 260,
         height: 146.2,
         gradientId: "grad-cicd",
-        items: ["Git Repos", "CI/CD Pipelines", "Automation", "Testing"]
+        items: ["GitHub Actions", "Git Repos", "Jest/Playwright", "Continuous Deployment"]
       }
     ];
 
     let linkData = [
       {
-        id: "C1",
-        source: "client",
-        target: "frontend",
-        type: "client",
-        sourceOffsetX: 0.5,
-        sourceOffsetY: 1.0,
-        targetOffsetX: 0.5,
-        targetOffsetY: 0.0,
-        pathMode: "straight"
-      },
-      {
-        id: "C2",
+        id: "C1", // Was C2 before, now renumbered to C1
         source: "frontend",
         target: "app",
         type: "frontend",
@@ -1058,7 +1023,7 @@
         pathMode: "straight"
       },
       {
-        id: "C3",
+        id: "C2", // Was C3 before
         source: "app",
         target: "backend",
         type: "app",
@@ -1069,7 +1034,7 @@
         pathMode: "straight"
       },
       {
-        id: "C4",
+        id: "C3", // Was C4 before
         source: "backend",
         target: "database",
         type: "backend",
@@ -1080,7 +1045,7 @@
         pathMode: "straight"
       },
       {
-        id: "C5",
+        id: "C4", // Was C5 before
         source: "database",
         target: "cloud",
         type: "database",
@@ -1091,7 +1056,7 @@
         pathMode: "straight"
       },
       {
-        id: "C6",
+        id: "C5", // Was C6 before
         source: "backend",
         target: "cloud",
         type: "backend",
@@ -1102,7 +1067,7 @@
         pathMode: "orth"
       },
       {
-        id: "C7",
+        id: "C6", // Was C7 before
         source: "auth",
         target: "app",
         type: "auth",
@@ -1113,7 +1078,7 @@
         pathMode: "straight"
       },
       {
-        id: "C8",
+        id: "C7", // Was C8 before
         source: "auth",
         target: "backend",
         type: "auth",
@@ -1124,7 +1089,7 @@
         pathMode: "straight"
       },
       {
-        id: "C9",
+        id: "C8", // Was C9 before
         source: "storage",
         target: "backend",
         type: "storage",
@@ -1135,7 +1100,7 @@
         pathMode: "straight"
       },
       {
-        id: "C10",
+        id: "C9", // Was C10 before
         source: "storage",
         target: "cloud",
         type: "storage",
@@ -1146,7 +1111,7 @@
         pathMode: "straight"
       },
       {
-        id: "C11",
+        id: "C10", // Was C11 before
         source: "cicd",
         target: "frontend",
         type: "cicd",
@@ -1157,7 +1122,7 @@
         pathMode: "straight"
       },
       {
-        id: "C12",
+        id: "C11", // Was C12 before
         source: "cicd",
         target: "app",
         type: "cicd",
@@ -1168,7 +1133,7 @@
         pathMode: "straight"
       },
       {
-        id: "C13",
+        id: "C12", // Was C13 before
         source: "cicd",
         target: "backend",
         type: "cicd",
@@ -1179,7 +1144,7 @@
         pathMode: "straight"
       },
       {
-        id: "C14",
+        id: "C13", // Was C14 before
         source: "cicd",
         target: "database",
         type: "cicd",
